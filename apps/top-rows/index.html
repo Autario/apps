@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Top rows</title>
+<script src="https://autario.com/autario.js"></script>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 20px; color: #111827; }
+  select { font: inherit; padding: 6px 8px; }
+  table { border-collapse: collapse; margin-top: 14px; width: 100%; }
+  th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+  th { background: #f9fafb; }
+  .muted { color: #6b7280; }
+</style>
+</head>
+<body>
+<h1 id="title">Top rows</h1>
+<p class="muted" id="who">Loading...</p>
+<select id="pick" aria-label="Dataset"></select>
+<table id="rows"></table>
+<script>
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  async function show(id) {
+    const rows = await autario.query(id, { limit: 10 });
+    const cols = rows.length ? Object.keys(rows[0]).filter((c) => !c.startsWith('autario_') && c !== 'dd_id') : [];
+    document.getElementById('rows').innerHTML =
+      '<tr>' + cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr>' +
+      rows.map((r) => '<tr>' + cols.map((c) => '<td>' + esc(r[c]) + '</td>').join('') + '</tr>').join('');
+  }
+  (async () => {
+    const { app, user } = await autario.ready();
+    document.getElementById('title').textContent = app.name;
+    document.getElementById('who').textContent = 'Signed in as ' + (user.name || user.email || 'a ' + user.role) + ' (' + user.role + ')';
+    const list = await autario.datasets();
+    if (!list.length) { document.getElementById('who').textContent += '. This app declares no dataset you can read.'; return; }
+    const pick = document.getElementById('pick');
+    pick.innerHTML = list.map((d) => '<option value="' + esc(d.id) + '">' + esc(d.title) + '</option>').join('');
+    pick.onchange = () => show(pick.value).catch((e) => { document.getElementById('who').textContent = e.error; });
+    await show(list[0].id);
+  })().catch((e) => { document.getElementById('who').textContent = e.error || String(e); });
+</script>
+</body>
+</html>
