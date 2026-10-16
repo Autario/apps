@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instagram Dashboard</title>
+<script src="https://autario.com/autario.js"></script>
+<style>
+:root{--accent:#007bff;--tint:#b3d4ff;--soft:#eef5ff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--bg2:#f9fafb}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+.wrap{max-width:1200px;margin:0 auto;padding:24px 16px 56px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:20px}
+header h1{font-size:22px;margin:0;font-weight:650;letter-spacing:-.01em}
+header .handle{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.sub{color:var(--muted);font-size:12px;margin:0 0 10px}
+h3.sec{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:32px 0 12px;font-weight:600}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr))}
+.cols2{grid-template-columns:repeat(auto-fit,minmax(min(100%,470px),1fr))}
+.cols4{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.card{border:1px solid var(--border);border-radius:8px;padding:16px;background:#fff;min-width:0}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:600}
+.src{color:var(--muted);font-size:11px;margin-top:12px;padding-top:8px;border-top:1px dashed var(--border)}
+.kpi .l{color:var(--muted);font-size:12px}
+.kpi .v{font-size:26px;font-weight:650;letter-spacing:-.02em;margin:2px 0}
+.kpi .n{font-size:12px;color:var(--muted)}
+.kpi .n.up{color:#047857}.kpi .n.down{color:#b91c1c}
+.kpi .src{margin-top:8px;padding-top:6px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:6px 0 14px}
+.strip div{background:var(--bg2);border-radius:6px;padding:8px 10px}
+.strip b{display:block;font-size:17px}
+.strip span{font-size:11px;color:var(--muted)}
+.slot{width:100%;min-height:40px}
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+svg .gl{stroke:#eef0f3;stroke-width:1}
+svg .ax{fill:var(--muted);font-size:11px}
+svg .val{fill:var(--text);font-size:11px;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:0 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.segbar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.segbar button{font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:999px;padding:4px 10px;cursor:pointer}
+.segbar button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px;cursor:pointer;user-select:none;background:#fff}
+th.sorted{color:var(--accent)}
+th.l,td.l{text-align:left}
+td.cap{white-space:normal;min-width:180px;max-width:320px;text-align:left}
+tr:hover td{background:var(--bg2)}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--accent);font-weight:600}
+.state{padding:28px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--bg2);border-radius:6px}
+.state.err{color:#b91c1c;background:#fef2f2}
+.page-state{padding:80px 16px;text-align:center;color:var(--muted)}
+.spinner{width:28px;height:28px;border:3px solid var(--soft);border-top-color:var(--accent);border-radius:50%;margin:0 auto 14px;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.note{font-size:11px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="page-state"><div class="spinner"></div>Loading your Instagram data…</div>
+</div>
+<script>
+(function(){
+const ACC='#007bff', TINT='#b3d4ff';
+const PAL=['#007bff','#66b0ff','#b3d4ff','#4b5563','#9ca3af','#d1d5db','#1e3a8a','#e5e7eb'];
+/* The datasets this app reads: the Instagram Insights reports autario creates
+   for a connected account. They are found by TITLE at start, so the app runs
+   on anyone's account. Tick them all when you run the app. */
+const DS={
+ stories:[null,'Instagram Insights: Stories (live ones, kept after they expire)'],
+ posts:[null,'Instagram Insights: Recent posts with engagement'],
+ totals:[null,'Instagram Insights: Account totals (last 28 days)'],
+ storyAct:[null,'Instagram Insights: Story replies, follows, profile visits and link taps'],
+ snap:[null,'Instagram Insights: Account snapshot (followers, following, posts)'],
+ online:[null,'Instagram Insights: Followers online by hour (last 30 days)'],
+ reels:[null,'Instagram Insights: Reel watch time (average and total, newest reels)'],
+ nav:[null,'Instagram Insights: Story navigation (taps forward, back, exits, swipes)'],
+ reachDay:[null,'Instagram Insights: Account reach by day'],
+ follDay:[null,'Instagram Insights: Followers by day'],
+ postAct:[null,'Instagram Insights: Follows and profile visits per post (newest posts)'],
+ demo:[null,'Instagram Insights: Follower demographics (age, gender, country, city)'],
+ daily13:[null,'Instagram Insights: Engaged accounts, story replies, reposts, follows and unfollows by day'],
+ daily14:[null,'Instagram Insights: Views, reach and interactions by day (by content type, followers vs non-followers)']
+};
+const D={}, E={};
+let canEdit=false;
+
+/* ---------- helpers ---------- */
+const num=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return isFinite(n)?n:null;};
+const fmt=(n,d=0)=>{n=num(n);return n===null?'–':n.toLocaleString('en-US',{maximumFractionDigits:d});};
+const fmt1=n=>fmt(n,1);
+const pct=n=>(n===null||!isFinite(n))?'–':(n*100).toLocaleString('en-US',{maximumFractionDigits:1})+'%';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const trunc=(s,n)=>{s=String(s??'');return s.length>n?s.slice(0,n-1)+'…':s;};
+const day=s=>s?String(s).slice(0,10):'';
+const shortDay=d=>{if(!d)return '';const x=new Date(d+'T00:00:00Z');return isNaN(x)?d:x.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});};
+const longDay=d=>{if(!d)return '';const x=new Date(d+'T00:00:00Z');return isNaN(x)?d:x.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});};
+const dateTime=s=>{const x=new Date(s);return isNaN(x)?'':x.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});};
+const sum=(a,f)=>a.reduce((t,r)=>t+(num(f(r))||0),0);
+const id=v=>String(v??'');
+const errText=e=>{if(!e)return 'Unknown error';if(typeof e==='string')return e;return [e.error||e.message||'Request failed',e.reason,e.status?('status '+e.status):''].filter(Boolean).join(' — ');};
+const PRETTY={FOLLOWER:'Followers',NON_FOLLOWER:'Non-followers',REELS:'Reels',REEL:'Reels',FEED:'Feed',STORY:'Stories',CAROUSEL_ALBUM:'Carousel',CAROUSEL_CONTAINER:'Carousel',IMAGE:'Image',VIDEO:'Video',TOTAL:'Total',AD:'Ads',POST:'Posts',
+ profile_links_taps:'Profile link taps',accounts_engaged:'Accounts engaged',total_interactions:'Total interactions',views:'Views',reach:'Reach',
+ follow_type:'follower type',media_product_type:'content type',tap_forward:'Tap forward',tap_back:'Tap back',tap_exit:'Exit',swipe_forward:'Swipe forward',F:'Women',M:'Men',U:'Unspecified'};
+const pretty=s=>{s=String(s??'');if(PRETTY[s])return PRETTY[s];const t=s.toLowerCase().replace(/_/g,' ');return t.charAt(0).toUpperCase()+t.slice(1);};
+function ticks(max,n=4){if(!(max>0))return[0,1];const raw=max/n,p=Math.pow(10,Math.floor(Math.log10(raw))),m=raw/p;const step=(m<=1?1:m<=2?2:m<=5?5:10)*p;const top=Math.ceil(max/step)*step;const t=[];for(let v=0;v<=top+step/2;v+=step)t.push(+v.toFixed(10));return t;}
+
+/* ---------- chart slots (redrawn at real width) ---------- */
+let SLOTS=[];
+function slot(fn){const i=SLOTS.length;SLOTS.push(fn);return `<div class="slot" data-slot="${i}"></div>`;}
+function drawSlots(root){(root||document).querySelectorAll('.slot').forEach(el=>{const W=Math.max(280,Math.floor(el.clientWidth));if(el.dataset.w==W&&el.innerHTML)return;el.dataset.w=W;try{el.innerHTML=SLOTS[+el.dataset.slot](W);}catch(e){el.innerHTML=`<div class="state err">${esc(e.message)}</div>`;}});}
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>drawSlots(),150);});
+
+/* ---------- charts ---------- */
+function barChart(items,W,o={}){
+  const H=o.h||220,L=56,R=10,T=26,B=o.xTitle?46:28,iw=W-L-R,ih=H-T-B,n=items.length||1;
+  const vf=o.valFmt||fmt;
+  const max=Math.max(0,...items.map(d=>num(d.value)||0));const tk=ticks(max);const top=tk[tk.length-1]||1;
+  const y=v=>T+ih-(v/top)*ih;const bw=iw/n,gap=Math.min(bw*0.28,10);
+  const hasHl=items.some(d=>d.hl);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  if(o.yTitle)s+=`<text x="0" y="11" class="ax">${esc(o.yTitle)}</text>`;
+  tk.forEach(v=>{s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="ax">${fmt(v)}</text>`;});
+  const every=Math.max(1,Math.ceil(n/Math.max(2,Math.floor(iw/(o.labelW||46)))));
+  const showVals=o.showValues!==false&&bw>=26;
+  items.forEach((d,i)=>{const v=num(d.value)||0,x=L+i*bw+gap/2,w=Math.max(1,bw-gap),yy=y(v);
+    s+=`<rect x="${x}" y="${yy}" width="${w}" height="${Math.max(0,T+ih-yy)}" rx="2" fill="${hasHl&&!d.hl?TINT:ACC}"><title>${esc(d.label)}: ${vf(v)}</title></rect>`;
+    if(showVals)s+=`<text x="${x+w/2}" y="${yy-4}" text-anchor="middle" class="val">${vf(v)}</text>`;
+    if(i%every===0)s+=`<text x="${x+w/2}" y="${T+ih+16}" text-anchor="middle" class="ax">${esc(d.label)}</text>`;});
+  if(o.xTitle)s+=`<text x="${L+iw/2}" y="${H-4}" text-anchor="middle" class="ax">${esc(o.xTitle)}</text>`;
+  return s+'</svg>';
+}
+function lineChart(items,W,o={}){
+  const H=o.h||220,L=56,R=16,T=26,B=o.xTitle?46:28,iw=W-L-R,ih=H-T-B,n=items.length;
+  const max=Math.max(0,...items.map(d=>num(d.value)||0));const tk=ticks(max);const top=tk[tk.length-1]||1;
+  const y=v=>T+ih-(v/top)*ih,x=i=>n===1?L+iw/2:L+i*iw/(n-1);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  if(o.yTitle)s+=`<text x="0" y="11" class="ax">${esc(o.yTitle)}</text>`;
+  tk.forEach(v=>{s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="ax">${fmt(v)}</text>`;});
+  const pts=items.map((d,i)=>[x(i),y(num(d.value)||0)]);
+  if(n>1){s+=`<path d="M${pts[0][0]},${T+ih} ${pts.map(p=>'L'+p[0]+','+p[1]).join(' ')} L${pts[n-1][0]},${T+ih}Z" fill="${ACC}" opacity=".08"/>`;
+    s+=`<path d="${pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${ACC}" stroke-width="2.2" stroke-linejoin="round"/>`;}
+  const every=Math.max(1,Math.ceil(n/Math.max(2,Math.floor(iw/52))));
+  const maxV=Math.max(...items.map(d=>num(d.value)||0));
+  items.forEach((d,i)=>{const v=num(d.value)||0;
+    s+=`<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="${v===maxV?4.5:3}" fill="#fff" stroke="${ACC}" stroke-width="2"><title>${esc(d.label)}: ${fmt(v)}</title></circle>`;
+    if(n<=14&&iw/n>30)s+=`<text x="${pts[i][0]}" y="${pts[i][1]-9}" text-anchor="middle" class="val">${fmt(v)}</text>`;
+    if(i%every===0)s+=`<text x="${pts[i][0]}" y="${T+ih+16}" text-anchor="middle" class="ax">${esc(d.label)}</text>`;});
+  if(o.xTitle)s+=`<text x="${L+iw/2}" y="${H-4}" text-anchor="middle" class="ax">${esc(o.xTitle)}</text>`;
+  return s+'</svg>';
+}
+function legend(series){return `<div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;}
+function stacked(labels,series,W,o={}){
+  const H=o.h||230,L=56,R=10,T=26,B=28,iw=W-L-R,ih=H-T-B,n=labels.length||1;
+  const totals=labels.map((_,i)=>series.reduce((a,s)=>a+(s.values[i]||0),0));
+  const tk=ticks(Math.max(0,...totals));const top=tk[tk.length-1]||1;const y=v=>T+ih-(v/top)*ih;
+  const bw=iw/n,gap=Math.min(bw*0.3,14);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  if(o.yTitle)s+=`<text x="0" y="11" class="ax">${esc(o.yTitle)}</text>`;
+  tk.forEach(v=>{s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="ax">${fmt(v)}</text>`;});
+  const every=Math.max(1,Math.ceil(n/Math.max(2,Math.floor(iw/46))));
+  labels.forEach((lb,i)=>{let acc=0;const x=L+i*bw+gap/2,w=Math.max(1,bw-gap);
+    series.forEach(se=>{const v=se.values[i]||0;if(!v)return;const y1=y(acc+v),y0=y(acc);acc+=v;
+      s+=`<rect x="${x}" y="${y1}" width="${w}" height="${Math.max(0,y0-y1)}" fill="${se.color}"><title>${esc(lb)} · ${esc(se.name)}: ${fmt(v)}</title></rect>`;});
+    if(bw>=28)s+=`<text x="${x+w/2}" y="${y(totals[i])-4}" text-anchor="middle" class="val">${fmt(totals[i])}</text>`;
+    if(i%every===0)s+=`<text x="${x+w/2}" y="${T+ih+16}" text-anchor="middle" class="ax">${esc(lb)}</text>`;});
+  return (series.length>1?legend(series):'')+s+'</svg>';
+}
+function hbars(items,W,o={}){
+  const LW=Math.min(o.lw||170,W*0.42),R=64,rh=26,H=items.length*rh+(o.xTitle?24:6);
+  const max=Math.max(0,...items.map(d=>num(d.value)||0))||1;const vf=o.fmt||fmt;const hasHl=items.some(d=>d.hl);
+  const chars=Math.max(10,Math.floor(LW/6.6));
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((d,i)=>{const yy=3+i*rh,v=num(d.value)||0,w=v/max*(W-LW-R);
+    s+=`<text x="${LW-8}" y="${yy+15}" text-anchor="end" class="ax">${esc(trunc(d.label,chars))}<title>${esc(d.label)}</title></text>`;
+    s+=`<rect x="${LW}" y="${yy+3}" width="${Math.max(1,w)}" height="${rh-9}" rx="3" fill="${hasHl&&!d.hl?TINT:ACC}"><title>${esc(d.label)}: ${vf(v)}</title></rect>`;
+    s+=`<text x="${LW+w+6}" y="${yy+15}" class="val">${vf(v)}</text>`;});
+  if(o.xTitle)s+=`<text x="${LW}" y="${H-4}" class="ax">${esc(o.xTitle)}</text>`;
+  return s+'</svg>';
+}
+function stacked100(rows,segs,W){
+  const LW=Math.min(150,W*0.36),R=8,rh=28,H=rows.length*rh+4;
+  const series=segs.map((sg,i)=>({name:pretty(sg),color:PAL[i%PAL.length]}));
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;const iw=W-LW-R;
+  rows.forEach((r,i)=>{const yy=2+i*rh;const tot=segs.reduce((a,sg)=>a+(r.parts[sg]||0),0)||1;let x=LW;
+    s+=`<text x="${LW-8}" y="${yy+17}" text-anchor="end" class="ax">${esc(trunc(r.label,Math.floor(LW/6.6)))}</text>`;
+    segs.forEach((sg,j)=>{const v=r.parts[sg]||0,w=v/tot*iw;if(!w)return;
+      s+=`<rect x="${x}" y="${yy+4}" width="${w}" height="${rh-10}" fill="${PAL[j%PAL.length]}"><title>${esc(r.label)} · ${esc(pretty(sg))}: ${fmt(v)} (${pct(v/tot)})</title></rect>`;
+      if(w>34)s+=`<text x="${x+w/2}" y="${yy+17}" text-anchor="middle" style="font-size:10px;fill:${j<1||j===3||j===6?'#fff':'#111827'}">${Math.round(v/tot*100)}%</text>`;x+=w;});});
+  return legend(series)+s+'</svg>';
+}
+function donut(items,W){
+  const total=items.reduce((a,d)=>a+(num(d.value)||0),0)||1;const size=170,r=62,sw=24,cx=size/2,cy=size/2,C=2*Math.PI*r;
+  const H=Math.max(size,items.length*24+10);let off=0;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f3f4f6" stroke-width="${sw}"/>`;
+  items.forEach((d,i)=>{const v=num(d.value)||0,len=v/total*C;
+    s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${PAL[i%PAL.length]}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"><title>${esc(d.label)}: ${fmt(v)}</title></circle>`;off+=len;});
+  s+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" style="font-size:20px;font-weight:650;fill:#111827">${fmt(total)}</text><text x="${cx}" y="${cy+15}" text-anchor="middle" class="ax">followers</text>`;
+  items.forEach((d,i)=>{const yy=12+i*24,lx=size+18;
+    s+=`<rect x="${lx}" y="${yy}" width="11" height="11" rx="2" fill="${PAL[i%PAL.length]}"/><text x="${lx+18}" y="${yy+10}" style="font-size:12px;fill:#111827">${esc(d.label)}</text><text x="${lx+18}" y="${yy+10}" dx="${Math.min(110,W-lx-80)}" class="val">${pct((num(d.value)||0)/total)}</text>`;});
+  return s+'</svg>';
+}
+function heatmap(grid,W){
+  const L=36,T=20,ch=20,cw=(W-L-4)/24,H=T+7*ch+4;const names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],order=[1,2,3,4,5,6,0];
+  let max=0;grid.forEach(r=>r.forEach(v=>{if(v!==null&&v>max)max=v;}));max=max||1;
+  const ev=cw<14?6:3;let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let h=0;h<24;h+=ev)s+=`<text x="${L+h*cw+cw/2}" y="12" text-anchor="middle" class="ax">${h}h</text>`;
+  order.forEach((wd,ri)=>{s+=`<text x="${L-6}" y="${T+ri*ch+14}" text-anchor="end" class="ax">${names[ri]}</text>`;
+    for(let h=0;h<24;h++){const v=grid[wd][h];const a=v===null?0:0.06+0.94*v/max;
+      s+=`<rect x="${L+h*cw+1}" y="${T+ri*ch+1}" width="${Math.max(1,cw-2)}" height="${ch-2}" rx="2" fill="${v===null?'#f3f4f6':'rgba(0,123,255,'+a.toFixed(3)+')'}"><title>${names[ri]} ${h}:00 — ${v===null?'no data':fmt(v)+' followers online (avg)'}</title></rect>`;}});
+  return s+'</svg>';
+}
+
+/* ---------- tables ---------- */
+const TBL={};
+function table(tid,cols,rows,sortKey,dir=-1){TBL[tid]={cols,rows,sortKey,dir};return `<div class="tbl" id="tbl-${tid}">${renderTable(tid)}</div>`;}
+function renderTable(tid){const t=TBL[tid];
+  const r=[...t.rows].sort((a,b)=>{const x=a[t.sortKey],y=b[t.sortKey];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return(x>y?1:x<y?-1:0)*t.dir;});
+  return `<table><thead><tr>${t.cols.map(c=>`<th data-t="${tid}" data-k="${c.k}" class="${c.left?'l ':''}${c.k===t.sortKey?'sorted':''}">${esc(c.l)}${c.k===t.sortKey?(t.dir<0?' ↓':' ↑'):''}</th>`).join('')}</tr></thead><tbody>${
+    r.map(row=>`<tr>${t.cols.map(c=>`<td class="${c.cls||(c.left?'l':'')}">${c.h?c.h(row):fmt(row[c.k])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
+
+/* ---------- explorer for metric/breakdown/segment by day ---------- */
+const EXP={};
+function explorer(key,pref){
+  const rows=D[key].map(r=>({date:day(r.date),metric:String(r.metric??''),breakdown:String(r.breakdown??'none'),segment:String(r.segment??'TOTAL'),value:num(r.value)||0}));
+  const combos=[],seen=new Set();
+  rows.forEach(r=>{const k=r.metric+'|'+r.breakdown;if(!seen.has(k)){seen.add(k);combos.push({metric:r.metric,breakdown:r.breakdown});}});
+  combos.sort((a,b)=>a.metric.localeCompare(b.metric)||(a.breakdown==='none'?-1:b.breakdown==='none'?1:a.breakdown.localeCompare(b.breakdown)));
+  let idx=0;if(pref){const i=combos.findIndex(c=>c.metric===pref.metric&&(!pref.breakdown||c.breakdown===pref.breakdown));if(i>=0)idx=i;}
+  EXP[key]={rows,combos,idx};
+  return `<div id="exp-${key}">${renderExp(key)}</div>`;
+}
+function segName(metric,sg){if(metric==='follows_and_unfollows'){if(sg==='FOLLOWER')return 'Follows';if(sg==='NON_FOLLOWER')return 'Unfollows';}return pretty(sg);}
+function renderExp(key){const s=EXP[key],c=s.combos[s.idx];
+  const btns=s.combos.map((cb,i)=>`<button data-exp="${key}" data-i="${i}" class="${i===s.idx?'on':''}">${esc(pretty(cb.metric))}${cb.breakdown!=='none'?' · by '+esc(pretty(cb.breakdown)):''}</button>`).join('');
+  const rs=s.rows.filter(r=>r.metric===c.metric&&r.breakdown===c.breakdown);
+  const dates=[...new Set(rs.map(r=>r.date))].sort();const segs=[...new Set(rs.map(r=>r.segment))];
+  const series=segs.map((sg,i)=>({name:sg==='TOTAL'?pretty(c.metric):segName(c.metric,sg),color:PAL[i%PAL.length],values:dates.map(d=>rs.filter(r=>r.date===d&&r.segment===sg).reduce((a,r)=>a+r.value,0))}));
+  const total=series.reduce((a,se)=>a+se.values.reduce((x,y)=>x+y,0),0);
+  return `<div class="segbar">${btns}</div><p class="sub">${fmt(total)} in total across ${dates.length} day${dates.length===1?'':'s'}${dates.length?' ('+shortDay(dates[0])+(dates.length>1?' – '+shortDay(dates[dates.length-1]):'')+')':''}</p>${slot(W=>stacked(dates.map(shortDay),series,W,{yTitle:pretty(c.metric)}))}`;}
+
+document.addEventListener('click',e=>{
+  const th=e.target.closest('th[data-t]');
+  if(th){const t=TBL[th.dataset.t];if(t.sortKey===th.dataset.k)t.dir*=-1;else{t.sortKey=th.dataset.k;t.dir=-1;}document.getElementById('tbl-'+th.dataset.t).innerHTML=renderTable(th.dataset.t);return;}
+  const b=e.target.closest('button[data-exp]');
+  if(b){const key=b.dataset.exp;EXP[key].idx=+b.dataset.i;const el=document.getElementById('exp-'+key);el.innerHTML=renderExp(key);drawSlots(el);
+    if(key==='daily14'&&canEdit){const c=EXP[key].combos[EXP[key].idx];try{autario.artifacts.set('view',{metric:c.metric,breakdown:c.breakdown}).catch(()=>{});}catch(_){}}}
+});
+
+/* ---------- cards ---------- */
+function card(o){
+  const srcKeys=[...(o.keys||[]),...(o.also||[])];
+  const src=`<div class="src">Source: ${srcKeys.map(k=>esc(DS[k][1])).join(' · ')}</div>`;
+  let inner;const err=(o.keys||[]).map(k=>E[k]).find(Boolean);
+  if(err)inner=`<div class="state err">Could not load data: ${esc(err)}</div>`;
+  else if((o.keys||[]).some(k=>!D[k]||!D[k].length))inner=`<div class="state">No data yet in this dataset.</div>`;
+  else{try{inner=o.body();}catch(e){inner=`<div class="state err">${esc(e.message||e)}</div>`;}
+    if(inner==null||inner==='')inner=`<div class="state">No data to show.</div>`;}
+  return `<section class="card ${o.cls||''}">${o.title?`<h2>${esc(o.title)}</h2>`:''}${o.sub?`<p class="sub">${esc(o.sub)}</p>`:''}${inner}${src}</section>`;
+}
+function kpi(label,value,note,key,noteCls){
+  let v=value,n=note||'';
+  if(E[key]){v='–';n='Error: '+E[key];noteCls='down';}
+  else if(!D[key]||!D[key].length){v='–';n='No data yet';noteCls='';}
+  return `<section class="card kpi"><div class="l">${esc(label)}</div><div class="v">${v}</div><div class="n ${noteCls||''}">${esc(n)}</div><div class="src">${esc(DS[key][1])}</div></section>`;
+}
+
+/* ---------- render ---------- */
+function render(pref){
+  SLOTS=[];
+  const posts=(D.posts||[]).map(r=>({id:id(r.media_id),posted:r.posted_at,caption:r.caption||'',permalink:r.permalink,format:r.format,mtype:r.media_type,
+    type:r.format==='REELS'?'Reel':r.media_type==='CAROUSEL_ALBUM'?'Carousel':r.media_type==='VIDEO'?'Video':'Image',
+    likes:num(r.likes),comments:num(r.comments),views:num(r.views),reach:num(r.reach),saves:num(r.saves),shares:num(r.shares),interactions:num(r.interactions)}));
+  const pAct={};(D.postAct||[]).forEach(r=>{pAct[id(r.media_id)]=r;});
+  posts.forEach(p=>{p.er=p.reach>0&&p.interactions!==null?p.interactions/p.reach:null;const a=pAct[p.id];p.pv=a?num(a.profile_visits):null;p.follows=a?num(a.follows):null;});
+
+  // header
+  const snaps=[...(D.snap||[])].sort((a,b)=>String(b.snapshot_date).localeCompare(String(a.snapshot_date)));
+  const latest=snaps[0],oldest=snaps[snaps.length-1];
+  const user=latest&&latest.username?latest.username:null;
+  let h=`<header><div><h1>Instagram performance${user?` · <span class="handle">@${esc(user)}</span>`:''}</h1><div class="muted">${latest?'Account snapshot as of '+longDay(day(latest.snapshot_date)):'Account overview'}</div></div></header>`;
+
+  // KPIs
+  const tot={};(D.totals||[]).forEach(r=>{tot[r.metric]=num(r.value);});
+  const fNow=latest?num(latest.followers):null,fOld=oldest?num(oldest.followers):null,fd=fNow!==null&&fOld!==null?fNow-fOld:null;
+  const ers=posts.map(p=>p.er).filter(v=>v!==null);const avgEr=ers.length?ers.reduce((a,b)=>a+b,0)/ers.length:null;
+  h+=`<div class="grid kpis">`;
+  h+=kpi('Followers',fmt(fNow),fd===null?'':`${fd>0?'+':fd<0?'−':'±'}${fmt(Math.abs(fd))} since ${shortDay(day(oldest.snapshot_date))}`,'snap',fd>0?'up':fd<0?'down':'');
+  h+=kpi('Following',fmt(latest&&latest.following),'','snap');
+  h+=kpi('Posts published',fmt(latest&&latest.media_count),'All time','snap');
+  h+=kpi('Views',fmt(tot.views),'Last 28 days','totals');
+  h+=kpi('Interactions',fmt(tot.total_interactions),'Last 28 days','totals');
+  h+=kpi('Accounts engaged',fmt(tot.accounts_engaged),'Last 28 days','totals');
+  h+=kpi('Profile link taps',fmt(tot.profile_links_taps),'Last 28 days','totals');
+  h+=kpi('Avg engagement rate',pct(avgEr),'Interactions ÷ reach, recent posts','posts');
+  h+=`</div>`;
+
+  // Growth
+  h+=`<h3 class="sec">Reach & growth</h3><div class="grid cols2">`;
+  h+=card({title:'Accounts reached per day',keys:['reachDay'],body:()=>{
+    const it=[...D.reachDay].sort((a,b)=>day(a.date).localeCompare(day(b.date))).map(r=>({label:shortDay(day(r.date)),value:num(r.value)}));
+    const s=it.reduce((a,d)=>a+(d.value||0),0),best=it.reduce((m,d)=>(d.value||0)>(m.value||0)?d:m,it[0]);
+    return `<p class="sub">${fmt(s)} reached over ${it.length} days · best day ${esc(best.label)} (${fmt(best.value)})</p>`+slot(W=>lineChart(it,W,{yTitle:'Accounts reached',xTitle:'Day'}));}});
+  h+=card({title:'New followers per day',keys:['follDay'],body:()=>{
+    const it=[...D.follDay].sort((a,b)=>day(a.date).localeCompare(day(b.date))).map(r=>({label:shortDay(day(r.date)),value:num(r.value)}));
+    const s=it.reduce((a,d)=>a+(d.value||0),0);
+    return `<p class="sub">${fmt(s)} new followers over ${it.length} days</p>`+slot(W=>barChart(it,W,{yTitle:'New followers',xTitle:'Day'}));}});
+  h+=`</div><div class="grid" style="margin-top:16px">`;
+  h+=card({title:'Daily views, reach & interactions',sub:'Pick a metric — split by content type or followers vs non-followers where available.',keys:['daily14'],body:()=>explorer('daily14',pref||{metric:'reach',breakdown:'follow_type'})});
+  h+=`</div>`;
+
+  // Posts
+  h+=`<h3 class="sec">Posts & reels</h3><div class="grid cols2">`;
+  h+=card({title:'Views per post',sub:'Most recent posts, oldest to newest. Darker bar = best performer.',keys:['posts'],body:()=>{
+    const ps=[...posts].sort((a,b)=>String(a.posted).localeCompare(String(b.posted)));const mx=Math.max(...ps.map(p=>p.views||0));
+    return slot(W=>barChart(ps.map(p=>({label:shortDay(day(p.posted)),value:p.views,hl:p.views===mx})),W,{yTitle:'Views',xTitle:'Posted on',labelW:52}));}});
+  h+=card({title:'Performance by format',sub:'Average per post.',keys:['posts'],body:()=>{
+    const g={};posts.forEach(p=>{(g[p.type]=g[p.type]||[]).push(p);});
+    const rows=Object.keys(g).map(k=>{const a=g[k];const e=a.map(p=>p.er).filter(v=>v!==null);
+      return{type:k,n:a.length,views:sum(a,p=>p.views)/a.length,reach:sum(a,p=>p.reach)/a.length,inter:sum(a,p=>p.interactions)/a.length,er:e.length?e.reduce((x,y)=>x+y,0)/e.length:null};}).sort((a,b)=>b.reach-a.reach);
+    const mx=Math.max(...rows.map(r=>r.reach));
+    return slot(W=>hbars(rows.map(r=>({label:r.type,value:Math.round(r.reach),hl:r.reach===mx})),W,{lw:110,xTitle:'Avg accounts reached per post'}))+
+      table('fmt',[{k:'type',l:'Format',left:true,h:r=>`<span class="pill">${esc(r.type)}</span>`},{k:'n',l:'Posts'},{k:'views',l:'Avg views'},{k:'reach',l:'Avg reach'},{k:'inter',l:'Avg interactions',h:r=>fmt1(r.inter)},{k:'er',l:'Eng. rate',h:r=>pct(r.er)}],rows,'reach');}});
+  h+=`</div><div class="grid" style="margin-top:16px">`;
+  h+=card({title:'All recent posts',sub:'Click a column header to sort. Engagement rate = interactions ÷ reach.',keys:['posts'],also:['postAct'],body:()=>table('posts',[
+    {k:'posted',l:'Posted',left:true,h:r=>esc(longDay(day(r.posted)))},{k:'type',l:'Format',left:true,h:r=>`<span class="pill">${esc(r.type)}</span>`},
+    {k:'caption',l:'Caption',left:true,cls:'cap',h:r=>`<a href="${esc(r.permalink)}" target="_blank" rel="noopener">${esc(trunc(r.caption||'(no caption)',90))}</a>`},
+    {k:'views',l:'Views'},{k:'reach',l:'Reach'},{k:'likes',l:'Likes'},{k:'comments',l:'Comments'},{k:'saves',l:'Saves'},{k:'shares',l:'Shares'},
+    {k:'interactions',l:'Interactions'},{k:'er',l:'Eng. rate',h:r=>pct(r.er)},{k:'pv',l:'Profile visits'},{k:'follows',l:'Follows'}],posts,'posted')});
+  h+=`</div>`;
+
+  // Reels
+  h+=`<h3 class="sec">Reel retention</h3><div class="grid">`;
+  h+=card({title:'Reel watch time & skip rate',keys:['reels'],also:['posts'],body:()=>{
+    const pm={};posts.forEach(p=>pm[p.id]=p);
+    const rs=D.reels.map(r=>{const p=pm[id(r.media_id)]||{};return{id:id(r.media_id),avg:num(r.avg_watch_time),total:num(r.total_watch_time),skip:num(r.skip_rate),posted:p.posted||null,caption:p.caption||'',permalink:p.permalink,views:p.views??null,
+      label:(p.posted?shortDay(day(p.posted))+' · ':'')+(p.caption?trunc(p.caption,28):'Reel '+id(r.media_id).slice(-5))};});
+    const totH=sum(rs,r=>r.total)/3600000;const avgS=sum(rs,r=>r.avg)/rs.length/1000;const sk=rs.filter(r=>r.skip!==null);const avgSkip=sk.length?sum(sk,r=>r.skip)/sk.length:null;
+    const best=Math.max(...rs.map(r=>r.avg||0));
+    return `<div class="strip"><div><b>${fmt1(totH)} h</b><span>Total watch time</span></div><div><b>${fmt1(avgS)} s</b><span>Avg watch time per reel</span></div><div><b>${avgSkip===null?'–':fmt1(avgSkip)+'%'}</b><span>Avg skip rate</span></div><div><b>${fmt(rs.length)}</b><span>Reels measured</span></div></div>`+
+      `<div class="grid cols2"><div>${slot(W=>hbars(rs.slice().sort((a,b)=>(b.avg||0)-(a.avg||0)).map(r=>({label:r.label,value:(r.avg||0)/1000,hl:r.avg===best})),W,{fmt:v=>fmt1(v)+' s',xTitle:'Average watch time (seconds)'}))}</div><div>`+
+      table('reels',[{k:'posted',l:'Reel',left:true,cls:'cap',h:r=>r.permalink?`<a href="${esc(r.permalink)}" target="_blank" rel="noopener">${esc(r.label)}</a>`:esc(r.label)},{k:'avg',l:'Avg watch',h:r=>fmt1((r.avg||0)/1000)+' s'},{k:'total',l:'Total watch',h:r=>fmt1((r.total||0)/3600000)+' h'},{k:'skip',l:'Skip rate',h:r=>r.skip===null?'–':fmt1(r.skip)+'%'},{k:'views',l:'Views'}],rs,'avg')+`</div></div>`;}});
+  h+=`</div>`;
+
+  // Stories
+  const sAct={};(D.storyAct||[]).forEach(r=>sAct[id(r.media_id)]=r);
+  const stories=(D.stories||[]).map(r=>{const a=sAct[id(r.media_id)]||{};return{id:id(r.media_id),posted:r.posted_at,caption:r.caption||'',permalink:r.permalink,type:r.media_type==='VIDEO'?'Video':'Image',
+    views:num(r.views),reach:num(r.reach),shares:num(r.shares),interactions:num(r.interactions),replies:num(a.replies),pv:num(a.profile_visits),clicks:num(a.link_clicks),follows:num(a.follows),
+    label:dateTime(r.posted_at)};}).sort((a,b)=>String(a.posted).localeCompare(String(b.posted)));
+  h+=`<h3 class="sec">Stories</h3><div class="grid cols2">`;
+  h+=card({title:'Story views',sub:'In posting order. Darker bar = most viewed.',keys:['stories'],also:['storyAct'],body:()=>{
+    const mx=Math.max(...stories.map(s=>s.views||0));
+    return `<div class="strip"><div><b>${fmt(stories.length)}</b><span>Stories</span></div><div><b>${fmt(sum(stories,s=>s.views))}</b><span>Total views</span></div><div><b>${fmt(sum(stories,s=>s.reach)/stories.length)}</b><span>Avg reach</span></div><div><b>${fmt(sum(stories,s=>s.replies))}</b><span>Replies</span></div><div><b>${fmt(sum(stories,s=>s.clicks))}</b><span>Link clicks</span></div></div>`+
+      slot(W=>barChart(stories.map(s=>({label:s.label.replace(/^\w+ /,''),value:s.views,hl:s.views===mx})),W,{yTitle:'Views',xTitle:'Posted (day, time)',labelW:70}));}});
+  h+=card({title:'How viewers moved through stories',sub:'Share of navigation actions per story. Lots of “Exit” means viewers dropped off.',keys:['nav'],also:['stories'],body:()=>{
+    const by={},segSet=new Set();D.nav.forEach(r=>{const s=String(r.segment);if(s==='TOTAL')return;segSet.add(s);const k=id(r.media_id);(by[k]=by[k]||{})[s]=(by[k][s]||0)+(num(r.value)||0);});
+    const pref=['tap_forward','tap_back','swipe_forward','tap_exit'];const segs=[...pref.filter(s=>segSet.has(s)),...[...segSet].filter(s=>!pref.includes(s))];
+    const sm={};stories.forEach(s=>sm[s.id]=s);
+    const rows=Object.keys(by).map(k=>({label:sm[k]?sm[k].label:'Story '+k.slice(-5),posted:sm[k]?sm[k].posted:'',parts:by[k]})).sort((a,b)=>String(a.posted).localeCompare(String(b.posted)));
+    const ex=sum(rows,r=>r.parts.tap_exit),all=rows.reduce((a,r)=>a+segs.reduce((x,s)=>x+(r.parts[s]||0),0),0);
+    return `<p class="sub">Overall exit share: <b>${pct(all?ex/all:null)}</b> of ${fmt(all)} navigation actions</p>`+slot(W=>stacked100(rows,segs,W));}});
+  h+=`</div><div class="grid" style="margin-top:16px">`;
+  h+=card({title:'Story details',sub:'Click a column header to sort.',keys:['stories'],also:['storyAct'],body:()=>table('stories',[
+    {k:'posted',l:'Posted',left:true,h:r=>esc(r.label)},{k:'type',l:'Type',left:true,h:r=>`<span class="pill">${esc(r.type)}</span>`},
+    {k:'caption',l:'Caption',left:true,cls:'cap',h:r=>`<a href="${esc(r.permalink)}" target="_blank" rel="noopener">${esc(trunc(r.caption||'(no caption)',70))}</a>`},
+    {k:'views',l:'Views'},{k:'reach',l:'Reach'},{k:'interactions',l:'Interactions'},{k:'shares',l:'Shares'},{k:'replies',l:'Replies'},{k:'pv',l:'Profile visits'},{k:'clicks',l:'Link clicks'},{k:'follows',l:'Follows'}],stories,'posted')});
+  h+=card({title:'Engagement by day',sub:'Engaged accounts, story replies, reposts, follows and unfollows.',keys:['daily13'],body:()=>explorer('daily13',null)});
+  h+=`</div>`;
+
+  // Audience
+  h+=`<h3 class="sec">Audience</h3><div class="grid cols2">`;
+  const onl=(D.online||[]).map(r=>({d:day(r.date),h:num(r.hour),v:num(r.value)})).filter(r=>r.h!==null&&r.v!==null);
+  h+=card({title:'When your followers are online',sub:'Average followers online per hour across the last 30 days. Darker = more people online.',keys:['online'],body:()=>{
+    const grid=Array.from({length:7},()=>Array(24).fill(null)),cnt=Array.from({length:7},()=>Array(24).fill(0));
+    onl.forEach(r=>{const wd=new Date(r.d+'T00:00:00Z').getUTCDay();if(isNaN(wd)||r.h<0||r.h>23)return;grid[wd][r.h]=(grid[wd][r.h]||0)+r.v;cnt[wd][r.h]++;});
+    for(let w=0;w<7;w++)for(let x=0;x<24;x++)if(cnt[w][x])grid[w][x]/=cnt[w][x];
+    return slot(W=>heatmap(grid,W))+`<p class="note">Hours as reported by Instagram.</p>`;}});
+  h+=card({title:'Best hours to post',sub:'Average followers online by hour of day; the three peak hours are highlighted.',keys:['online'],body:()=>{
+    const av=[];for(let x=0;x<24;x++){const a=onl.filter(r=>r.h===x);av.push(a.length?a.reduce((t,r)=>t+r.v,0)/a.length:0);}
+    const top=[...av].map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(a=>a[1]);
+    return `<p class="sub">Peak: <b>${top.map(x=>x+':00').join(', ')}</b></p>`+slot(W=>barChart(av.map((v,i)=>({label:String(i),value:Math.round(v),hl:top.includes(i)})),W,{yTitle:'Followers online (avg)',xTitle:'Hour of day',labelW:30,showValues:false}));}});
+  h+=`</div>`;
+  const demoLatest=(()=>{const rows=D.demo||[];const mx=rows.reduce((m,r)=>String(r.snapshot_date)>m?String(r.snapshot_date):m,'');return rows.filter(r=>String(r.snapshot_date)===mx);})();
+  const demoBy=b=>demoLatest.filter(r=>String(r.breakdown)===b).map(r=>({label:String(r.segment),value:num(r.value)||0}));
+  const emptyIf=a=>a.length?null:`<div class="state">No ${'data'} for this breakdown yet.</div>`;
+  h+=`<div class="grid cols2" style="margin-top:16px">`;
+  h+=card({title:'Followers by age',keys:['demo'],body:()=>{const a=demoBy('age').sort((x,y)=>(parseInt(x.label)||999)-(parseInt(y.label)||999));const mx=Math.max(...a.map(d=>d.value));
+    return emptyIf(a)||slot(W=>barChart(a.map(d=>({...d,hl:d.value===mx})),W,{yTitle:'Followers',xTitle:'Age group'}));}});
+  h+=card({title:'Followers by gender',keys:['demo'],body:()=>{const a=demoBy('gender').sort((x,y)=>y.value-x.value).map(d=>({label:pretty(d.label),value:d.value}));
+    return emptyIf(a)||slot(W=>donut(a,W));}});
+  h+=card({title:'Top countries',sub:'Top 10 by followers.',keys:['demo'],body:()=>{const a=demoBy('country').sort((x,y)=>y.value-x.value).slice(0,10);
+    return emptyIf(a)||slot(W=>hbars(a.map((d,i)=>({...d,hl:i===0})),W,{lw:120,xTitle:'Followers'}));}});
+  h+=card({title:'Top cities',sub:'Top 10 by followers.',keys:['demo'],body:()=>{const a=demoBy('city').sort((x,y)=>y.value-x.value).slice(0,10);
+    return emptyIf(a)||slot(W=>hbars(a.map((d,i)=>({...d,hl:i===0})),W,{lw:190,xTitle:'Followers'}));}});
+  h+=`</div>`;
+
+  const app=document.getElementById('app');app.innerHTML=h;drawSlots();
+}
+
+function fatal(msg){document.getElementById('app').innerHTML=`<div class="page-state"><div class="state err" style="max-width:560px;margin:0 auto"><b>Could not load the dashboard.</b><br>${esc(msg)}</div></div>`;}
+
+/* Resolve each report by its title among the datasets this app may read.
+   Titles are what autario names the Instagram Insights reports, so the same
+   file works on any account. A report the owner did not tick, or has not
+   fetched yet, shows an honest empty state on its cards. */
+function resolveDatasets(list){
+  const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+  Object.keys(DS).forEach(k=>{
+    const want=norm(DS[k][1]);
+    const hit=list.find(d=>norm(d.title)===want)||list.find(d=>norm(d.title).includes(want))||list.find(d=>want.includes(norm(d.title))&&norm(d.title).length>24);
+    if(hit)DS[k][0]=hit.id;else E[k]='Dataset not selected for this app: '+DS[k][1];
+  });
+}
+
+async function main(){
+  let user;
+  try{const r=await autario.ready();user=r&&r.user;}catch(e){fatal(errText(e));return;}
+  canEdit=!!user&&['owner','admin','editor'].includes(user.role);
+  let list=[];
+  try{list=await autario.datasets();}catch(e){fatal(errText(e));return;}
+  resolveDatasets(list);
+  const keys=Object.keys(DS).filter(k=>DS[k][0]);
+  if(!keys.length){fatal('None of the Instagram Insights reports is selected for this app. Run it again and tick the Instagram datasets.');return;}
+  const res=await Promise.allSettled(keys.map(k=>autario.query(DS[k][0],{limit:50000})));
+  res.forEach((r,i)=>{if(r.status==='fulfilled')D[keys[i]]=Array.from(r.value||[]);else E[keys[i]]=errText(r.reason);});
+  if(keys.every(k=>E[k])){fatal(E[keys[0]]);return;}
+  let pref=null;try{const v=await autario.artifacts.get('view');if(v&&v.metric)pref=v;}catch(_){}
+  try{render(pref);}catch(e){fatal(e.message||String(e));}
+}
+if(window.autario)main();else window.addEventListener('load',()=>{if(window.autario)main();else fatal('autario.js is not available.');});
+})();
+</script>
+</body>
+</html>

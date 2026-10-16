@@ -14,6 +14,7 @@ No build step, no hosting, no API keys in the file.
 
 | App | What it shows | Data it reads |
 |---|---|---|
+| [instagram-followers](apps/instagram-followers) | Followers, reach, posts, reels, stories, best hours and demographics for one Instagram account | Instagram Insights connector |
 | [top-rows](apps/top-rows) | The first rows of any dataset you connected, as a table | any dataset you pick |
 
 ## How an app talks to autario
